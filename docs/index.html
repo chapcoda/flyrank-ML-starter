@@ -229,7 +229,7 @@ footer a{color:var(--accent)}
 <p>This is not a rare edge case. Across the 22 clients with at least 30 labelled pages, the correlation between a client's May coverage and its apparent decline rate is <strong>−0.52</strong>.</p>
 
 <figure>
-  <img src="figs/fig3_contamination.png" alt="Scatter plot of client May search-console coverage against apparent decline rate across 22 clients, showing a negative relationship.">
+  <img src="fig3_contamination.png" alt="Scatter plot of client May search-console coverage against apparent decline rate across 22 clients, showing a negative relationship.">
   <figcaption><strong>Figure 1.</strong> Each point is one client with at least 30 labelled pages. Clients whose data pipeline lapsed in May look like their content collapsed. Two honest qualifications: the relationship is driven mainly by the two extreme low-coverage clients, and 22 clients is a small sample for a correlation. This is suggestive portfolio-level evidence for a mechanism that is certain at row level.</figcaption>
 </figure>
 
@@ -259,7 +259,7 @@ footer a{color:var(--accent)}
 </tbody></table></div>
 
 <figure>
-  <img src="figs/fig1_headline.png" alt="Bar chart comparing Precision@50 and ROC AUC for the baseline and the Random Forest against the same held-out split.">
+  <img src="fig1_headline.png" alt="Bar chart comparing Precision@50 and ROC AUC for the baseline and the Random Forest against the same held-out split.">
   <figcaption><strong>Figure 2.</strong> Model versus baseline on the same held-out split, same rows, same metric. The dashed line marks chance for AUC. The baseline's AUC sits well below it.</figcaption>
 </figure>
 
@@ -269,7 +269,7 @@ footer a{color:var(--accent)}
 <p>An AUC of 0.298 is the more interesting number. A rule with no information scores 0.5. This rule scored well below that, which means it ordered pages consistently wrong.</p>
 
 <figure>
-  <img src="figs/fig2_inversion.png" alt="Left: bar chart showing 92% of held-out pages fall in the 31-90 day age bucket. Right: ROC curves showing the baseline below the diagonal and the model above it.">
+  <img src="fig2_inversion.png" alt="Left: bar chart showing 92% of held-out pages fall in the 31-90 day age bucket. Right: ROC curves showing the baseline below the diagonal and the model above it.">
   <figcaption><strong>Figure 3.</strong> The mechanism. 92% of held-out pages sit in a single age bucket, so the staleness weight is effectively a constant and the rule collapses into a visibility ranking. The baseline's ROC curve bows <em>below</em> the diagonal — the signature of a ranking pointed the wrong way.</figcaption>
 </figure>
 
@@ -372,7 +372,7 @@ footer a{color:var(--accent)}
 
 <h3>What the ranking is worth</h3>
 <figure>
-  <img src="figs/fig4_per_client.png" alt="Grouped bar chart comparing queue hit rate against client base rate for six clients, showing no client clearly beating its base rate.">
+  <img src="fig4_per_client.png" alt="Grouped bar chart comparing queue hit rate against client base rate for six clients, showing no client clearly beating its base rate.">
   <figcaption><strong>Figure 4.</strong> Queue hit rate against each client's own base rate. Client C has two pages, neither of which declined, so both bars are zero. The aggregate advantage does not reproduce for any individual client.</figcaption>
 </figure>
 
