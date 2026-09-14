@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>When the Heuristic Points Backwards — Predicting Content Decline on 79M Rows of Search Data</title>
+<meta name="description" content="A page-level content-decline model built on the FlyRank ML Internship dataset, and an audit of why its headline number could not be trusted as stated.">
+<style>
+:root{
+  --ink:#1a1a1a; --muted:#5c6370; --rule:#e2e4e8;
+  --accent:#2d6a4f; --warn:#c1121f; --bg:#fdfdfc; --panel:#f6f7f6;
+  --measure:38rem;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.7 Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+}
+.wrap{max-width:var(--measure);margin:0 auto;padding:0 1.5rem}
+header.masthead{border-bottom:1px solid var(--rule);padding:4.5rem 0 2.5rem;margin-bottom:3rem}
+.kicker{
+  font:600 .7rem/1 ui-sans-serif,system-ui,-apple-system,sans-serif;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:1.25rem
+}
+h1{font-size:2.1rem;line-height:1.22;margin:0 0 1rem;font-weight:600;letter-spacing:-.015em}
+.standfirst{font-size:1.08rem;color:var(--muted);margin:0 0 1.75rem;line-height:1.6}
+.byline{font:.85rem/1.6 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
+.byline a{color:var(--accent)}
+h2{
+  font:600 .74rem/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted);
+  margin:3.5rem 0 1.25rem;padding-bottom:.6rem;border-bottom:1px solid var(--rule)
+}
+h3{font-size:1.18rem;font-weight:600;margin:2.25rem 0 .75rem;line-height:1.35}
+h4{font-size:1rem;font-weight:600;margin:1.75rem 0 .5rem}
+p{margin:0 0 1.15rem}
+a{color:var(--accent)}
+strong{font-weight:600}
+code{
+  font:.875em ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:var(--panel);padding:.12em .38em;border-radius:3px
+}
+pre{
+  background:var(--panel);border:1px solid var(--rule);border-radius:6px;
+  padding:1rem 1.1rem;overflow-x:auto;font-size:.84rem;line-height:1.55;margin:0 0 1.25rem
+}
+pre code{background:none;padding:0}
+ul,ol{margin:0 0 1.15rem;padding-left:1.3rem}
+li{margin-bottom:.45rem}
+blockquote{
+  margin:1.5rem 0;padding:.15rem 0 .15rem 1.25rem;
+  border-left:3px solid var(--accent);color:var(--muted);font-style:italic
+}
+.tw{overflow-x:auto;margin:0 0 1.5rem}
+table{border-collapse:collapse;width:100%;font-size:.875rem;line-height:1.5}
+th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--rule)}
+th{
+  font:600 .7rem/1.3 ui-sans-serif,system-ui,sans-serif;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--ink)
+}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+th.n{text-align:right}
+figure{margin:2rem 0}
+figure img{width:100%;height:auto;display:block;border:1px solid var(--rule);border-radius:6px;background:#fff}
+figcaption{font-size:.82rem;color:var(--muted);margin-top:.7rem;line-height:1.55}
+.callout{
+  background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:0 6px 6px 0;padding:1.1rem 1.25rem;margin:1.75rem 0;font-size:.94rem
+}
+.callout.warn{border-left-color:var(--warn)}
+.callout p:last-child{margin-bottom:0}
+.callout .lbl{
+  font:600 .68rem/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.6rem
+}
+.callout.warn .lbl{color:var(--warn)}
+.toc{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:1.25rem 1.5rem;margin:0 0 3rem}
+.toc ol{margin:0;padding-left:1.2rem;font-size:.9rem;columns:2;column-gap:2rem}
+.toc li{margin-bottom:.35rem;break-inside:avoid}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin:2rem 0}
+.kpi div{background:var(--bg);padding:1rem 1.1rem}
+.kpi .v{font-size:1.5rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .k{font:.72rem/1.4 ui-sans-serif,system-ui,sans-serif;color:var(--muted);margin-top:.35rem}
+footer{border-top:1px solid var(--rule);margin-top:4rem;padding:2.5rem 0 4rem;font-size:.88rem;color:var(--muted)}
+footer a{color:var(--accent)}
+@media (max-width:640px){
+  h1{font-size:1.65rem}
+  header.masthead{padding:2.5rem 0 2rem}
+  .toc ol{columns:1}
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="kicker">FlyRank ML Internship · Lane 2 · Capstone</div>
+    <h1>When the Heuristic Points Backwards</h1>
+    <p class="standfirst">Predicting content decline across 37 client portfolios — and finding three reasons the result could not be trusted as stated.</p>
+    <p class="byline">
+      Noah Chapman · September 2026<br>
+      <a href="https://github.com/chapcoda/flyrank-ML-starter">Repository and notebooks</a>
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+
+<nav class="toc">
+  <ol>
+    <li><a href="#abstract">Abstract</a></li>
+    <li><a href="#intro">Introduction</a></li>
+    <li><a href="#data">Data</a></li>
+    <li><a href="#method">Methodology</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#limits">Limitations</a></li>
+    <li><a href="#recs">Recommendations</a></li>
+    <li><a href="#repro">Reproducibility</a></li>
+    <li><a href="#ack">Acknowledgments</a></li>
+  </ol>
+</nav>
+
+<section id="abstract">
+<h2>Abstract</h2>
+<p>Can a model identify which published pages are about to lose search visibility, early enough for a content team to act? Using 50,840 pages across 37 client portfolios from the FlyRank internship warehouse — features from February–April 2026, outcomes from May 2026 — I built a client-held-out Random Forest and compared it against the industry heuristic that stale content decays. The heuristic did not merely underperform: it scored a ROC AUC of 0.298, below chance, meaning it ranked pages consistently wrong, and I traced that inversion to a feature whose entire interquartile range collapsed to a single value. The model improved on it (Precision@50 of 0.64 against 0.26; AUC 0.638 against 0.298), but auditing that result surfaced three problems that matter more than the improvement: a one-directional label contamination affecting 17.7% of positive cases, an evaluation metric that returned seven different values across seven runs on a fixed seed, and a test set in which 87% of pages belonged to a single client. The output is decision-support for sequencing a weekly content review queue — not a count of declining pages, and not evidence that acting on them changes the outcome.</p>
+
+<div class="kpi">
+  <div><div class="v">0.298</div><div class="k">Baseline ROC AUC — below chance</div></div>
+  <div><div class="v">0.638</div><div class="k">Model ROC AUC</div></div>
+  <div><div class="v">17.7%</div><div class="k">Positive labels contaminated</div></div>
+  <div><div class="v">49/50</div><div class="k">Top predictions from one client</div></div>
+</div>
+</section>
+
+<section id="intro">
+<h2>1 · Introduction</h2>
+<p>An SEO agency has more pages than review hours. A team managing tens of thousands of pages across dozens of clients cannot inspect them all, so the operative question is never <em>which pages are declining</em> — it is <em>which twenty should I open this week.</em></p>
+<p>That framing matters more than it might seem. It makes this a ranking problem rather than a classification problem, which is why every metric here is reported at Precision@K rather than as accuracy, and why the deliverable is an ordered queue rather than a set of predictions.</p>
+
+<h3>The starting hypothesis, and where it led</h3>
+<p>The conventional answer comes from industry practice and from FlyRank's own published research: content decays as it goes stale, so pages that have not been updated recently are the ones at risk. I built exactly that rule as a baseline.</p>
+<p>It did not merely perform poorly. It scored a ROC AUC of <strong>0.298</strong>. A rule carrying no information scores 0.5. This one scored well below that, which means it did not lack signal — it ordered pages consistently <em>wrong</em>. A content team following it would have been sent to the wrong pages.</p>
+<p>Explaining that inversion is what this paper is actually about. Pursuing it surfaced three findings that bear on the result more than the model does:</p>
+<ol>
+  <li><strong>The label was contaminated in one direction.</strong> Missing search-console coverage in the outcome month could only ever produce a "declining" label, never a "stable" one — affecting 17.7% of positive labels and none of the negatives.</li>
+  <li><strong>The evaluation metric was unstable.</strong> Precision@50 returned seven different values across seven runs of an identical pipeline with a fixed seed, while ROC AUC moved by less than 0.008.</li>
+  <li><strong>The feature the rule was built on had no usable variance.</strong> Days since last update had a 25th, 50th, and 75th percentile all equal to 64 — there was no staleness variation available to learn from, in either direction.</li>
+</ol>
+<p>A model was built, and it does rank better than the baseline. But the honest contribution of this work is the account of why that improvement is harder to measure than it looks, and what would have to be fixed before anyone acted on it.</p>
+</section>
+
+<section id="data">
+<h2>2 · Data</h2>
+<p>The FlyRank ML Internship warehouse release — a pseudonymised export of production search performance, hosted as Parquet. Two tables are used: <code>dim_content</code> for page metadata and <code>fact_content_daily_performance</code> for daily per-page search and analytics metrics.</p>
+<p>The daily fact table holds roughly 79 million rows. It is never downloaded. DuckDB reads directly over the hosted Parquet, touching only the columns and monthly partitions each query needs, which keeps the entire analysis inside a free Colab session.</p>
+<p>All identifiers are hashed. No client names, page URLs, or search query text appear in the dataset or in this work. Figures below relabel the held-out clients as A–F.</p>
+
+<h3>Windows</h3>
+<div class="tw"><table>
+<thead><tr><th>Window</th><th>Dates</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td>Feature</td><td>2026-02-01 → 2026-04-30</td><td>everything the model may see</td></tr>
+<tr><td>Trailing</td><td>2026-04-01 → 2026-04-30</td><td>denominator of the outcome</td></tr>
+<tr><td>Outcome</td><td>2026-05-01 → 2026-05-31</td><td>numerator of the outcome</td></tr>
+</tbody></table></div>
+<p>The separation is deliberate. A model meant to give a content team lead time must be restricted to what was knowable on 30 April, so no May data enters any feature.</p>
+
+<h3>What was excluded, and what that costs</h3>
+<div class="tw"><table>
+<thead><tr><th class="n">Rows</th><th class="n">Clients</th><th>Filter</th></tr></thead>
+<tbody>
+<tr><td class="n">50,840</td><td class="n">37</td><td>published, not deleted, joined to Feb–Apr performance</td></tr>
+<tr><td class="n">33,296</td><td class="n">29</td><td>…with a defined outcome label</td></tr>
+<tr><td class="n">2,477</td><td class="n">6</td><td>…held out from training for evaluation</td></tr>
+</tbody></table></div>
+<p><strong>17,544 pages — 34.5% of the portfolio — were dropped for having an undefined label.</strong> These are pages with zero April impressions; a page that earned nothing in April cannot meaningfully decline by 25% in May, so the ratio is undefined. Excluding them is correct, but it narrows the scope of every claim here: this work is about pages that <em>had</em> measurable search visibility and lost it. It says nothing about pages that never achieved any — and those are a third of the inventory.</p>
+
+<h3>Coverage — the trap this dataset sets</h3>
+<p>The warehouse carries explicit availability flags, because a client's data connection can lapse. When it does, the underlying metrics arrive as zeros that mean <em>not measured</em> rather than <em>measured as nothing.</em></p>
+<div class="tw"><table>
+<thead><tr><th>Window</th><th class="n">GSC</th><th class="n">GA4</th></tr></thead>
+<tbody>
+<tr><td>Feature (Feb–Apr)</td><td class="n">100.0%</td><td class="n">55.5%</td></tr>
+<tr><td>Outcome (May)</td><td class="n">91.1%</td><td class="n">—</td></tr>
+</tbody></table></div>
+<p>Every feature aggregate is guarded by an availability filter, so no dishonest zero enters the model's inputs. Feature-window coverage is complete. The outcome window is 91.1%, and that gap is where this paper's central methodological finding lives.</p>
+<p>GA4 coverage at 55.5% is a separate and quieter problem: nearly half the portfolio has no honest engagement data, so every session, scroll, and engagement feature is imputed for those pages.</p>
+
+<h3>Class balance</h3>
+<p>The outcome is close to balanced by construction — 50.2% of labelled pages are marked declining, because a 25% month-over-month drop is roughly a coin flip in this portfolio.</p>
+<p>Per client, it is not balanced at all: <strong>the declining rate ranges from 0% to 100% across the 29 clients.</strong> That range is the single most important fact in this section. It means a portfolio-level figure describes no individual client, and it is why every evaluation below is reported per client as well as in aggregate.</p>
+</section>
+
+<section id="method">
+<h2>3 · Methodology</h2>
+
+<h3>Assumptions</h3>
+<p>Three, stated so a reader can reject them. First, that a page's near-future search performance is partly predictable from its recent performance and static properties — if decline were driven entirely by algorithm updates or competitor moves, no feature here would help. Second, that a 25% month-over-month impression drop is a meaningful adverse outcome; the threshold is a convention chosen because it produces a near-balanced split. Third, that pages within a client are more alike than pages across clients — an assumption the results confirm by a wide margin.</p>
+
+<h3>Features</h3>
+<p>Nineteen features — sixteen numeric, three categorical — drawn entirely from the Feb–April window and static page metadata: search performance (impressions, clicks, impression-weighted average position, CTR), analytics (sessions, engaged sessions, engagement seconds, organic sessions, engagement rate), content properties (character count, word count, content age, days since last update), market signals (search volume, competition, CPC), and three categoricals (content type, main intent, competition level).</p>
+<p><strong>Excluded as label-derived:</strong> <code>trend_direction</code>, <code>trend_pct</code>, and <code>is_declining_label</code>, all identified in the Week 3 data contract. These encode the outcome and would leak it directly.</p>
+<p><strong>Excluded as inert:</strong> <code>days_since_last_optimized</code>, which is 100% null. It survived into the first model version before detection; removing it changed both metrics by nothing, because the imputer had been silently skipping the column throughout.</p>
+<p><strong>A feature-quality caveat:</strong> <code>char_count</code> and <code>word_count</code> are null for 52.2% of the modelling table and are median-imputed. No claim about content depth appears anywhere in this paper, and none should be drawn from it.</p>
+
+<h3>The feature the baseline was built on is degenerate in the middle</h3>
+<p><code>days_since_last_update</code> has a standard deviation of 34.94, so it varies overall. But its 25th, 50th, and 75th percentiles are <strong>all exactly 64</strong> — half the portfolio sits on a single value, with variation only in the tails.</p>
+<p>A tree-based model splits on thresholds. A feature whose entire interquartile range collapses to one number offers almost no threshold worth splitting on. When the results below report that this feature contributed nothing measurable, the honest reading is not <em>content freshness does not predict decline.</em> It is that <strong>this window could not test the question.</strong></p>
+
+<h3>Label definition — and a contamination found in it</h3>
+<p>A page is labelled <strong>declining</strong> if its May impressions are at or below 75% of its April impressions, <strong>stable</strong> otherwise, and <strong>undefined</strong> if it had zero April impressions.</p>
+<p>The implementation used <code>COALESCE(may_impressions, 0)</code>, so a page absent from the May partition was treated as having earned zero impressions.</p>
+
+<div class="callout warn">
+  <span class="lbl">Central finding</span>
+  <p><strong>Zero always clears the 0.75× threshold.</strong> So missing outcome data can only ever produce a "declining" label, and can never produce a "stable" one. The contamination is one-directional by construction.</p>
+</div>
+
+<div class="tw"><table>
+<thead><tr><th>Label</th><th class="n">Pages</th><th class="n">No honest May coverage</th></tr></thead>
+<tbody>
+<tr><td>declining</td><td class="n">16,711</td><td class="n">2,964 (17.7%)</td></tr>
+<tr><td>stable</td><td class="n">16,585</td><td class="n">0 (0.0%)</td></tr>
+</tbody></table></div>
+
+<p>This is not a rare edge case. Across the 22 clients with at least 30 labelled pages, the correlation between a client's May coverage and its apparent decline rate is <strong>−0.52</strong>.</p>
+
+<figure>
+  <img src="figs/fig3_contamination.png" alt="Scatter plot of client May search-console coverage against apparent decline rate across 22 clients, showing a negative relationship.">
+  <figcaption><strong>Figure 1.</strong> Each point is one client with at least 30 labelled pages. Clients whose data pipeline lapsed in May look like their content collapsed. Two honest qualifications: the relationship is driven mainly by the two extreme low-coverage clients, and 22 clients is a small sample for a correlation. This is suggestive portfolio-level evidence for a mechanism that is certain at row level.</figcaption>
+</figure>
+
+<p><strong>The fix is known and scoped: restrict the label to pages with honest May coverage.</strong> It is not applied in this paper. Applying it would change every number reported here, and this work's contribution is the identification and measurement of the problem rather than a corrected model. Restricting to clean labels narrows the per-client decline range at the top (0.96 → 0.91) and widens it at the bottom (0.38 → 0.27), so real between-client variation survives the correction — the contamination is not the whole explanation for it.</p>
+<p>Why this generalises: <code>COALESCE(x, 0)</code> is a routine SQL idiom, correct in most contexts. Here it silently converts a data-availability event into an outcome, in one direction, invisibly from any results table. Nothing about the model's output would reveal it.</p>
+
+<h3>Baseline and validation design</h3>
+<p>The baseline ranks pages by a staleness bucket weight multiplied by log-dampened impressions — the industry heuristic, with visibility breaking ties. It is evaluated on exactly the same rows, split, and metric as the model.</p>
+<p>Validation uses a <strong>client-grouped holdout</strong>: <code>GroupShuffleSplit</code> at 80/20 on client ID, so no client appears on both sides. 23 training clients (30,819 rows), 6 test clients (2,477 rows), zero overlap.</p>
+<p>The model is <code>RandomForestClassifier(n_estimators=300, min_samples_leaf=5, class_weight='balanced', random_state=42, n_jobs=1)</code> inside a pipeline with median imputation and one-hot encoding, fitted on training data only. <code>n_jobs=1</code> is deliberate — the results section explains why.</p>
+
+<h3>Leakage checks</h3>
+<p><strong>Label-derived features:</strong> none present. All 19 features were checked against the banned list plus the intermediate label columns.</p>
+<p><strong>April in both windows.</strong> April sits inside the feature window and is the label's denominator, raising the possibility that the model learns mean reversion rather than decline risk. Tested: correlations with the label are −0.013 (impressions), −0.070 (clicks), and −0.131 (average position) — all weak and negative. Declining pages have <em>fewer</em> impressions (2,633 vs 2,861) and fewer clicks (4.5 vs 9.2) than stable ones, the opposite of what mean reversion predicts. The hypothesis is tested and rejected.</p>
+<p>One result is genuinely odd and is not explained away: declining pages have a <strong>better</strong> average position (16.2 vs 20.8). Higher-ranking pages should not be more likely to decline. The most plausible reading connects to the contamination above — pages pulled into the declining class by missing May data carry whatever Feb–April position they had, including good ones. Confirming that requires re-running under the corrected label, which this work does not do.</p>
+</section>
+
+<section id="results">
+<h2>4 · Results</h2>
+
+<div class="tw"><table>
+<thead><tr><th>Method</th><th class="n">Precision@50</th><th class="n">ROC AUC</th></tr></thead>
+<tbody>
+<tr><td>Week 4 baseline (staleness × visibility)</td><td class="n">0.260</td><td class="n">0.298</td></tr>
+<tr><td>Random Forest</td><td class="n">0.640</td><td class="n">0.638</td></tr>
+<tr><td>Test base rate</td><td class="n">0.506</td><td class="n">—</td></tr>
+</tbody></table></div>
+
+<figure>
+  <img src="figs/fig1_headline.png" alt="Bar chart comparing Precision@50 and ROC AUC for the baseline and the Random Forest against the same held-out split.">
+  <figcaption><strong>Figure 2.</strong> Model versus baseline on the same held-out split, same rows, same metric. The dashed line marks chance for AUC. The baseline's AUC sits well below it.</figcaption>
+</figure>
+
+<p>The model outperforms the baseline on both metrics. It is also, on its own terms, a weak classifier: an AUC of 0.638 means that given one declining page and one stable page at random, the model scores the declining one higher about 64% of the time. Chance is 50%. That is real signal and not much of it, and no claim here should be read as saying otherwise.</p>
+
+<h3>The baseline did not fail — it inverted</h3>
+<p>An AUC of 0.298 is the more interesting number. A rule with no information scores 0.5. This rule scored well below that, which means it ordered pages consistently wrong.</p>
+
+<figure>
+  <img src="figs/fig2_inversion.png" alt="Left: bar chart showing 92% of held-out pages fall in the 31-90 day age bucket. Right: ROC curves showing the baseline below the diagonal and the model above it.">
+  <figcaption><strong>Figure 3.</strong> The mechanism. 92% of held-out pages sit in a single age bucket, so the staleness weight is effectively a constant and the rule collapses into a visibility ranking. The baseline's ROC curve bows <em>below</em> the diagonal — the signature of a ranking pointed the wrong way.</figcaption>
+</figure>
+
+<p>The bucket distribution explains it completely. 2,279 of 2,477 held-out pages — <strong>92%</strong> — fall in the 31–90 day bucket, with 5 pages in 0–30 days and 193 in 91–180. The staleness weight is therefore a constant for nine pages in ten, and the baseline score collapses to log-impressions for almost the entire portfolio, with a small group of 91–180 day pages pushed to the bottom by a 15× weight penalty regardless of visibility.</p>
+<p>So the rule was not ranking by staleness. It was ranking by visibility. And visibility runs the wrong way for this outcome: declining pages averaged 2,633 impressions against 2,861 for stable ones, and 4.5 clicks against 9.2. A rule that ranks high-visibility pages first is ranking the <em>less</em> likely to decline first — which is precisely what an AUC below 0.5 records.</p>
+
+<div class="callout">
+  <span class="lbl">Worth stating plainly</span>
+  <p>Inverting the baseline's output gives an AUC of <strong>0.702</strong> — higher than the model's 0.638. The heuristic contained more usable signal than the model extracted. It was simply pointed the wrong way.</p>
+</div>
+
+<h3>What the split design is worth</h3>
+<div class="tw"><table>
+<thead><tr><th>Split</th><th class="n">Test clients</th><th class="n">Precision@50</th><th class="n">ROC AUC</th></tr></thead>
+<tbody>
+<tr><td>naive row-level</td><td class="n">28</td><td class="n">0.88</td><td class="n">0.730</td></tr>
+<tr><td>client-grouped</td><td class="n">6</td><td class="n">0.64</td><td class="n">0.638</td></tr>
+</tbody></table></div>
+<p>Identical model, features, and seed. The only difference is whether pages from the same client may appear on both sides. The naive split inflates Precision@50 by 38% and AUC by 14%. Pages within a client share site architecture, publishing cadence, connection quality, and demand seasonality — so a model that has seen some of a client's pages can recognise the client rather than the pattern. None of that transfers to a client it has never seen, which is the only case that matters in deployment.</p>
+<p>A paper reporting 0.88 would not be lying about the arithmetic. It would be measuring something that never happens.</p>
+
+<h3>Where the signal is</h3>
+<div class="tw"><table>
+<thead><tr><th>Feature</th><th class="n">Permutation importance</th></tr></thead>
+<tbody>
+<tr><td><code>avg_position_weighted</code></td><td class="n">0.0455</td></tr>
+<tr><td><code>ctr</code></td><td class="n">0.0338</td></tr>
+<tr><td><code>clicks_90d</code></td><td class="n">0.0153</td></tr>
+<tr><td><code>sessions_90d</code></td><td class="n">0.0044</td></tr>
+<tr><td><code>sessions_organic_90d</code></td><td class="n">0.0028</td></tr>
+<tr><td><code>search_volume</code></td><td class="n">0.0026</td></tr>
+<tr><td><strong><code>days_since_last_update</code></strong></td><td class="n"><strong>0.0002</strong></td></tr>
+</tbody></table></div>
+<p>Two features carry almost everything: where a page ranks, and whether people click it when they see it. Everything else is close to noise.</p>
+<p><code>days_since_last_update</code> — the feature the entire baseline was built on — contributes 0.0002, indistinguishable from zero. As set out above, the careful reading is that this window could not test the freshness hypothesis, not that the hypothesis is false.</p>
+
+<h3>What Precision@50 is actually measuring</h3>
+<p>The headline 0.640 requires three qualifications, and together they matter more than the number.</p>
+<p><strong>It is one client.</strong> Of the top 50 predictions, 49 come from a single client and one from a second. Four of the six test clients contribute nothing. This is partly the model and substantially the test set's own composition — 2,152 of the 2,477 held-out pages (87%) belong to that one client.</p>
+<p><strong>Almost half the hits are unverifiable.</strong> 32 of the top 50 are labelled declining, but 14 of those 32 have no honest May coverage and were labelled declining by the <code>COALESCE</code> mechanism. For those pages we cannot distinguish a genuine decline from a lapsed data connection. Reported Precision@50 is 0.64; the verifiable floor, if every unverifiable page were wrong, is <strong>0.36</strong>.</p>
+<p><strong>The metric itself is unstable.</strong> Across seven runs of an identical pipeline with a fixed seed — same rows, same split, same six test clients — Precision@50 measured 0.52, 0.58, 0.60, 0.62, 0.64, 0.66, and 0.70. ROC AUC over the same runs stayed within 0.632–0.639. Changing only <code>n_jobs</code> from −1 to 1, a parallelism setting with no mathematical effect, moved Precision@50 by two points and left AUC within 0.001.</p>
+<p>The mechanism is that floating-point accumulation order varies with thread count and machine, perturbing borderline probabilities just enough to reshuffle which pages sit either side of rank 50. AUC integrates over the entire ranking and barely moves. The baseline, by contrast, returns exactly 0.260 and 0.298 on every run — it is arithmetic over fixed columns with no fitted model. <strong>The instability belongs to the model's probability estimates, not to the data or the split.</strong> Any Precision@50 figure here should be read to one significant figure.</p>
+
+<h3>What survives</h3>
+<p>Two claims hold at full strength. <strong>The baseline is inverted, and the reason is understood</strong> — AUC 0.298 is a property of the full ranking, not of any top-K cut, so none of the qualifications above touch it. <strong>Position and click-through carry the signal; update recency does not, in this window</strong> — that comes from AUC-based permutation over the whole test set rather than a top-50 cut.</p>
+<p>One claim should be read as directional only: <em>the model ranks better than the baseline.</em> The direction held across every configuration run. The magnitude did not.</p>
+</section>
+
+<section id="limits">
+<h2>5 · Limitations &amp; honest framing</h2>
+
+<h3>What this result is measured on</h3>
+<div class="tw"><table>
+<tbody>
+<tr><td>Portfolio pages joined to performance</td><td class="n">50,840</td></tr>
+<tr><td>Pages with a defined label</td><td class="n">33,296 (65%)</td></tr>
+<tr><td>Pages the headline result is measured on</td><td class="n">2,477 (4.9%)</td></tr>
+<tr><td>Clients the headline result is measured on</td><td class="n">6 of 37</td></tr>
+<tr><td>Outcome months observed</td><td class="n">1</td></tr>
+</tbody></table></div>
+<p>Every number above rests on 4.9% of the portfolio, six clients, and a single month.</p>
+<p><strong>The test set is one client wearing a coat.</strong> Of the 2,477 held-out pages, 2,152 — 87% — belong to a single client. The remaining five contribute 325 pages between them, two of them contributing 14 and 2 pages respectively. Held-out base rates range from 0.00 to 0.83 across those six clients.</p>
+
+<h3>The label is contaminated and the contamination is not fixed</h3>
+<p>17.7% of declining labels rest on missing outcome data rather than observed decline, one-directionally. The fix is specified and <strong>is not applied anywhere in this paper.</strong> This is deliberate: identifying and measuring the problem is this work's contribution, and a corrected model would be a different piece of work reported against different numbers. It does mean every result here should be read as provisional.</p>
+
+<h3>The primary metric is not stable enough to quote precisely</h3>
+<p>Seven values across seven runs on a fixed seed. ROC AUC is the more trustworthy summary and is the figure to compare against.</p>
+
+<h3>A third of the portfolio is outside the question entirely</h3>
+<p>34.5% of pages were excluded for having zero April impressions, which makes a proportional decline undefined. This work is about pages that <em>had</em> visibility and lost it. It says nothing about pages that never achieved any — arguably a content team's larger problem.</p>
+
+<h3>Nothing here is causal</h3>
+<p>The model identifies association, not mechanism. A page ranking deep with weak click-through is more likely to decline in this data; that does not establish that improving either would prevent the decline. Testing that claim requires an experiment nobody has run here: refresh a randomly selected half of a flagged cohort, leave the other half, compare.</p>
+
+<h3>What would change the conclusions</h3>
+<p><strong>The inverted baseline would be overturned</strong> by a feature window spanning a genuine range of update recency. The explanation above depends on 92% of pages sitting in one age bucket; across a window where staleness actually varies, the rule might discriminate normally.</p>
+<p><strong>The model's advantage would be confirmed or removed</strong> by evaluating across several grouped folds rather than one, reported per client. One fold cannot settle this.</p>
+<p><strong>The contamination's effect would be quantified</strong> by re-running the full pipeline under the corrected label.</p>
+<p><strong>The freshness hypothesis would become testable</strong> with a multi-month window. It is currently neither supported nor refuted by this work.</p>
+</section>
+
+<section id="recs">
+<h2>6 · Ranked recommendations</h2>
+<p>The model's output becomes a weekly review queue: <strong>the top 10 pages per client</strong>, ranked by risk score, each carrying a plain-language reason.</p>
+<p>Per-client rather than global, and the data forces that choice. The global top 50 draws 49 of 50 pages from a single client, leaving four of six clients with nothing. An agency runs one account manager per client, so a global queue would hand most managers an empty list — not because their pages are healthy, but because whichever client has the most high-impression pages dominates any global cut. Ranking within each client produces 52 pages across all six.</p>
+
+<h3>Why pages surface</h3>
+<div class="tw"><table>
+<thead><tr><th>Reason</th><th class="n">Pages</th></tr></thead>
+<tbody>
+<tr><td>above-median impressions, bottom-quartile CTR</td><td class="n">21</td></tr>
+<tr><td>bottom-quartile CTR</td><td class="n">15</td></tr>
+<tr><td>high score, no single dominant driver</td><td class="n">9</td></tr>
+<tr><td>ranks deep for this client</td><td class="n">4</td></tr>
+<tr><td>ranks deep + bottom-quartile CTR</td><td class="n">2</td></tr>
+<tr><td>ranks deep + above-median impressions, low CTR</td><td class="n">1</td></tr>
+</tbody></table></div>
+<p>All thresholds are relative to the page's own client — an average position of 10 is unremarkable for one client and poor for another. Thirty-eight of 52 entries involve weak click-through; seven involve deep ranking. Two codes never fire: no queue page is stale relative to its client, and none has zero impressions. <strong>The queue is not surfacing neglected pages. It is surfacing visible, under-converting ones</strong> — a different population than the staleness rule would have produced.</p>
+
+<h3>What the ranking is worth</h3>
+<figure>
+  <img src="figs/fig4_per_client.png" alt="Grouped bar chart comparing queue hit rate against client base rate for six clients, showing no client clearly beating its base rate.">
+  <figcaption><strong>Figure 4.</strong> Queue hit rate against each client's own base rate. Client C has two pages, neither of which declined, so both bars are zero. The aggregate advantage does not reproduce for any individual client.</figcaption>
+</figure>
+
+<div class="tw"><table>
+<thead><tr><th>Client</th><th class="n">Pages</th><th class="n">Declined</th><th class="n">Queue hit rate</th><th class="n">Base rate</th><th class="n">Δ</th></tr></thead>
+<tbody>
+<tr><td>A</td><td class="n">10</td><td class="n">5</td><td class="n">0.50</td><td class="n">0.48</td><td class="n">+0.02</td></tr>
+<tr><td>B</td><td class="n">10</td><td class="n">7</td><td class="n">0.70</td><td class="n">0.68</td><td class="n">+0.02</td></tr>
+<tr><td>C</td><td class="n">2</td><td class="n">0</td><td class="n">0.00</td><td class="n">0.00</td><td class="n">0.00</td></tr>
+<tr><td>D</td><td class="n">10</td><td class="n">6</td><td class="n">0.60</td><td class="n">0.60</td><td class="n">0.00</td></tr>
+<tr><td>E</td><td class="n">10</td><td class="n">8</td><td class="n">0.80</td><td class="n">0.83</td><td class="n">−0.03</td></tr>
+<tr><td>F</td><td class="n">10</td><td class="n">5</td><td class="n">0.50</td><td class="n">0.64</td><td class="n">−0.14</td></tr>
+</tbody></table></div>
+<p>Aggregate: 59.6% against a 50.6% base rate. Per client: two are marginally above base rate, two are flat, two fall below it — no client clearly beats it.</p>
+<p>This table should not be read as a per-client verdict. An earlier run of the identical pipeline swung one client by 24 points. <strong>Ten-page samples cannot establish which clients the ranking helps.</strong> The defensible statement is that ranking helps somewhat on average, and this evidence cannot say for whom.</p>
+
+<h3>Before acting on any entry</h3>
+<ul>
+  <li><strong>Check impression volume.</strong> 25 of 52 queue pages have under 100 impressions in ninety days, where the ranking is close to noise.</li>
+  <li><strong>Check whether analytics is connected.</strong> 23 of 52 have no honest GA4 coverage, so engagement signals are imputed.</li>
+  <li><strong>Check the reason against the client's own console.</strong> If it isn't visible there, the feature window and the current state have diverged.</li>
+  <li><strong>Supply the business context the model cannot have</strong> — a discontinued product, an ended campaign, a deliberate deindexing, a seasonal trough.</li>
+</ul>
+<p>One check came back clean: all 52 queue pages have complete coverage in the feature window. The contamination affects the <em>outcome</em> window, so it distorts how the model was trained and scored, not what it reads when ranking a page today.</p>
+
+<h3>What must not be done with this</h3>
+<ul>
+  <li><strong>Do not automate content changes from it.</strong> The queue orders attention; humans decide.</li>
+  <li><strong>Do not report it as a count of at-risk pages.</strong> Precision@50 of 0.64 has a verifiable floor of 0.36.</li>
+  <li><strong>Do not deindex or delete on a queue position.</strong> The model's measured blind spot is exactly the already-low-visibility pages that keep declining — it reads "near the floor" as stability.</li>
+  <li><strong>Do not treat this as evidence that intervention works.</strong> The recommendation is <em>look at these first</em>, not <em>fixing these will work.</em></li>
+</ul>
+
+<div class="callout">
+  <span class="lbl">The claim, stated plainly</span>
+  <p>For a content team with limited review hours, working this queue is a better use of the first ten hours than working alphabetically, by publication date, or by the staleness heuristic — which this work shows would point the wrong way. That is a modest claim, and it is the one the evidence supports.</p>
+</div>
+</section>
+
+<section id="repro">
+<h2>7 · Reproducibility</h2>
+<p>Everything below is re-runnable from a fresh clone of <a href="https://github.com/chapcoda/flyrank-ML-starter">the repository</a>.</p>
+
+<pre><code>git clone https://github.com/chapcoda/flyrank-ML-starter
+cd flyrank-ML-starter
+pip install -q duckdb huggingface_hub scikit-learn pandas numpy matplotlib</code></pre>
+
+<p>Set a Hugging Face read token with access to the warehouse as the environment variable <code>HF_TOKEN</code> (in Colab, as a Secret of that name — the notebooks read it via <code>userdata.get("HF_TOKEN")</code> and never contain a token). Then open <code>work/notebooks/capstone.ipynb</code> and run all cells in order. The notebook is self-contained: it rebuilds the feature table, label, split, model, queue, and every figure on this page.</p>
+
+<h3>Seeds and determinism</h3>
+<p><code>random_state=42</code> throughout. <strong><code>n_jobs=1</code> is required for reproducibility</strong>: with <code>n_jobs=-1</code>, floating-point accumulation order varies with the thread count the runtime allocates, and Precision@50 moves by up to two points as a result. This is documented above rather than hidden.</p>
+<p><strong>Environment:</strong> Python 3.13, scikit-learn 1.6.1, DuckDB, pandas, numpy, matplotlib. The sklearn version is printed by the setup cell and recorded in the metrics file, because Precision@50 has varied across library versions.</p>
+
+<h3>Holdout claim, and how to check it</h3>
+<p>The evaluation is a client-grouped holdout, not a sealed one-shot evaluation — the split is rebuilt deterministically from the seed on every run, and the model was refitted many times during development. I am not claiming a blind single evaluation and this repository should not be read as supporting one.</p>
+<p>What <em>is</em> checkable: the cell that builds the split and the held-out frame is the <code>MODEL, BASELINE, SPLIT, QUEUE</code> cell in <code>capstone.ipynb</code>, and the metrics it produced are committed at <code>work/outputs/capstone_metrics.json</code> — both metrics, both windows, the model specification, the sklearn version, row and client counts, and the contamination figures. Every number on this page can be checked against a committed artifact rather than taken on faith.</p>
+
+<h3>Notebooks</h3>
+<div class="tw"><table>
+<thead><tr><th>Notebook</th><th>What it establishes</th></tr></thead>
+<tbody>
+<tr><td><code>w03_data_contract.ipynb</code></td><td>grain, windows, and the availability traps</td></tr>
+<tr><td><code>w04_baseline_score.ipynb</code></td><td>the staleness baseline</td></tr>
+<tr><td><code>w05_model.ipynb</code></td><td>the model and its first comparison</td></tr>
+<tr><td><code>w06_validation_audit.ipynb</code></td><td>the audit that found the contamination</td></tr>
+<tr><td><code>w07_action_playbook.ipynb</code></td><td>the per-client queue</td></tr>
+<tr><td><code>capstone.ipynb</code></td><td>this paper, end to end</td></tr>
+</tbody></table></div>
+<p>The full write-up, structured against the internship's rubric axes, is at <code>work/capstone_report.md</code>.</p>
+
+<div class="callout warn">
+  <span class="lbl">Known deviation</span>
+  <p>The label fix described above is specified but not applied. Any re-run reproduces the contaminated label, deliberately, so that the reported numbers match.</p>
+</div>
+</section>
+
+<section id="ack">
+<h2>8 · Acknowledgments &amp; data credit</h2>
+<p>Built on the <strong>FlyRank ML Internship dataset</strong> — a pseudonymised export of production search performance covering roughly 79 million daily page-level records across 37 client portfolios.</p>
+<p>Data provided by <a href="https://flyrank.ai">FlyRank</a>.</p>
+<p>All identifiers in this work are hashed. No client names, page URLs, or search query text appear in the dataset or in this paper.</p>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Noah Chapman · FlyRank ML Internship, Lane 2 · September 2026<br>
+    <a href="https://github.com/chapcoda/flyrank-ML-starter">Repository, notebooks, and artifacts</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
