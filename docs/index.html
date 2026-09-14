@@ -146,7 +146,7 @@ footer a{color:var(--accent)}
 
 <h3>What testing the premise produced</h3> 
 
-<p>The conventional answer comes from industry practice and from FlyRank's own published research: content decays as it goes stale, so pages that have not been updated recently are the ones at risk. I built exactly that rule as a baseline.</p>
+<p>I built that rule as a baseline: rank pages by a staleness weight, with visibility breaking ties. Same held-out rows, same metric as the model.</p> 
 <p>It did not merely perform poorly. It scored a ROC AUC of <strong>0.298</strong>. A rule carrying no information scores 0.5. This one scored well below that, which means it did not lack signal — it ordered pages consistently <em>wrong</em>. A content team following it would have been sent to the wrong pages.</p>
 <p>Explaining that inversion is what this paper is actually about. Pursuing it surfaced three findings that bear on the result more than the model does:</p>
 <ol>
