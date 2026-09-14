@@ -428,7 +428,7 @@ pip install -q duckdb huggingface_hub scikit-learn pandas numpy matplotlib</code
 
 <h3>Holdout claim, and how to check it</h3>
 <p>The evaluation is a client-grouped holdout, not a sealed one-shot evaluation — the split is rebuilt deterministically from the seed on every run, and the model was refitted many times during development. I am not claiming a blind single evaluation and this repository should not be read as supporting one.</p>
-<p>What <em>is</em> checkable: the cell that builds the split and the held-out frame is the <code>MODEL, BASELINE, SPLIT, QUEUE</code> cell in <code>capstone.ipynb</code>, and the metrics it produced are committed at <code>work/outputs/capstone_metrics.json</code> — both metrics, both windows, the model specification, the sklearn version, row and client counts, and the contamination figures. Every number on this page can be checked against a committed artifact rather than taken on faith.</p>
+<p>What <em>is</em> checkable: the cell that builds the split and the held-out frame is the <code>MODEL, BASELINE, SPLIT, QUEUE</code> cell in <code>capstone.ipynb</code>, and the metrics it produced are committed at <code>work/capstone_metrics.json</code> — both metrics, both windows, the model specification, the sklearn version, row and client counts, and the contamination figures. Every number on this page can be checked against a committed artifact rather than taken on faith.</p>
 
 <h3>Notebooks</h3>
 <div class="tw"><table>
