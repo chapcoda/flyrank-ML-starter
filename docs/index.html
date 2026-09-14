@@ -125,8 +125,7 @@ footer a{color:var(--accent)}
 
 <section id="abstract">
 <h2>Abstract</h2>
-<p>Can a model identify which published pages are about to lose search visibility, early enough for a content team to act? Using 50,840 pages across 37 client portfolios from the FlyRank internship warehouse — features from February–April 2026, outcomes from May 2026 — I built a client-held-out Random Forest and compared it against the industry heuristic that stale content decays. The heuristic did not merely underperform: it scored a ROC AUC of 0.298, below chance, meaning it ranked pages consistently wrong, and I traced that inversion to a feature whose entire interquartile range collapsed to a single value. The model improved on it (Precision@50 of 0.64 against 0.26; AUC 0.638 against 0.298), but auditing that result surfaced three problems that matter more than the improvement: a one-directional label contamination affecting 17.7% of positive cases, an evaluation metric that returned seven different values across seven runs on a fixed seed, and a test set in which 87% of pages belonged to a single client. The output is decision-support for sequencing a weekly content review queue — not a count of declining pages, and not evidence that acting on them changes the outcome.</p>
-
+<p>FlyRank's content-refresh workflow rests on a premise its own March 2026 research makes explicit: content decays as it ages, so refreshing mature pages is the highest-priority action a content team can take. Lane 2 of this internship asks whether that prioritisation can be improved — whether a model can identify which published pages are about to lose search visibility, early enough for an editor to act. Using 50,840 pages across 37 client portfolios from the FlyRank internship warehouse — features from February–April 2026, outcomes from May 2026 — I built a client-held-out Random Forest and compared it against a baseline encoding exactly that staleness premise. The heuristic did not merely underperform: it scored a ROC AUC of 0.298, below chance, meaning it ranked pages consistently wrong on this portfolio, and inverting its output would have scored 0.702 — better than the model. The model improved on it (Precision@50 of 0.64 against 0.26; AUC 0.638 against 0.298), but auditing that result surfaced three problems that matter more than the improvement: a one-directional label contamination in which a client's lapsed analytics connection is recorded as content decline, affecting 17.7% of positive cases; an evaluation metric that returned seven different values across seven runs on a fixed seed; and a test set in which 87% of pages belonged to a single client. The output is a per-client review queue — decision-support for sequencing an editor's week, not a count of declining pages, and not evidence that refreshing them changes the outcome.</p>
 <div class="kpi">
   <div><div class="v">0.298</div><div class="k">Baseline ROC AUC — below chance</div></div>
   <div><div class="v">0.638</div><div class="k">Model ROC AUC</div></div>
@@ -137,10 +136,16 @@ footer a{color:var(--accent)}
 
 <section id="intro">
 <h2>1 · Introduction</h2>
-<p>An SEO agency has more pages than review hours. A team managing tens of thousands of pages across dozens of clients cannot inspect them all, so the operative question is never <em>which pages are declining</em> — it is <em>which twenty should I open this week.</em></p>
-<p>That framing matters more than it might seem. It makes this a ranking problem rather than a classification problem, which is why every metric here is reported at Precision@K rather than as accuracy, and why the deliverable is an ordered queue rather than a set of predictions.</p>
+<h3>The content problem this comes from</h3>
 
-<h3>The starting hypothesis, and where it led</h3>
+<p>FlyRank manages content portfolios at a scale where inspection is impossible. The warehouse behind this work covers 37 client portfolios and roughly 79 million daily page-level records; a single client in it holds over 9,000 published pages. No editor reviews that inventory. The operative question is never <em>which pages are declining</em> — it is <em>which twenty should I open this week.</em></p>
+
+<p>The platform's existing answer comes from FlyRank's own published research, which identifies content refresh as Priority Action #1: older pages that were updated recently outperform similarly old stale pages, so a team should work its oldest high-visibility pages first. That recommendation is reasonable, widely held across the industry, and is the premise Lane 2 was set up to test against production data.</p>
+
+<p>Framing matters here. Because the decision is <em>what do I open first</em>, this is a ranking problem rather than a classification problem — which is why every metric below is reported at Precision@K rather than as accuracy, why the deliverable is an ordered queue, and why the evaluation is client-held-out: an editor working a new client's account gets no benefit from a model that has memorised their existing pages.</p>
+
+<h3>What testing the premise produced</h3> 
+
 <p>The conventional answer comes from industry practice and from FlyRank's own published research: content decays as it goes stale, so pages that have not been updated recently are the ones at risk. I built exactly that rule as a baseline.</p>
 <p>It did not merely perform poorly. It scored a ROC AUC of <strong>0.298</strong>. A rule carrying no information scores 0.5. This one scored well below that, which means it did not lack signal — it ordered pages consistently <em>wrong</em>. A content team following it would have been sent to the wrong pages.</p>
 <p>Explaining that inversion is what this paper is actually about. Pursuing it surfaced three findings that bear on the result more than the model does:</p>
